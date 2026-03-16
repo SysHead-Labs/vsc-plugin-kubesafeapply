@@ -22,5 +22,9 @@ A simple and slim extention to operate yaml files via `kubectl`.
 - a configured `kubectl`
 - an active terminal in VSCode
 
+This project is a fork of https://github.com/bagechashu/vsc-plugin-kubeapply
+with additional functionality for Kubernetes context validation.
+
 ## Special Thanks List
 - [shaimendel](https://github.com/shaimendel/vscode-plugin-cicd-github-actions)
+- [bagechashu](https://github.com/bagechashu/vsc-plugin-kubeapply)
