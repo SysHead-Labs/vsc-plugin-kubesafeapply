@@ -1,9 +1,9 @@
 {
-  "name": "kubeApply",
-  "displayName": "Kubernetes Apply",
+  "name": "kubernetes-safe-apply",
+  "displayName": "Kubernetes Safe Apply",
   "description": "Apply/Diff/Delete Kubernetes resource files",
   "version": "2.0.0",
-  "publisher": "bashu",
+  "publisher": "Syshead",
   "keywords": [
     "kubernetes",
     "apply",

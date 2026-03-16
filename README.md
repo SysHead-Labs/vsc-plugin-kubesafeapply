@@ -1,4 +1,4 @@
-# Kubernetes Apply
+# Kubernetes Safe Apply
 
 ## Features
 
