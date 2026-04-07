@@ -9,6 +9,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 ## [2.0.1] - 2026-04-07
 - Bump extension version to 2.0.1.
 - Override transitive `lodash` to address the advisory reported by `npm audit`.
+- Show the current kubectl context and the exact command in the confirmation dialog before apply and delete actions.
+- Change the 5-second pre-execution delay from terminal `echo` output to a VS Code dialog and cancellable countdown notification.
 
 ## [2.0.0] - 2026-04-07
 - Rename the extension to `Kubernetes Safe Apply` and update the publisher to `Syshead`.

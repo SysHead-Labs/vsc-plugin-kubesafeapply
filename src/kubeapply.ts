@@ -1,10 +1,70 @@
 import * as vscode from "vscode";
+import { execFile } from "node:child_process";
 import { getResourcePath, ensureTerminalExists, selectTerminal } from "./utils";
 import { mergeAndUpdateLocalResources, mergeAndUpdateLocalResourcesContainers } from "kubectl-sync2local";
 import { KubeConfig } from "@kubernetes/client-node";
 
 function quoteShellArg(value: string): string {
     return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+async function waitBeforeKubectl(command: string): Promise<boolean> {
+    const totalSeconds = 5;
+    let canceled = false;
+
+    await vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            cancellable: true,
+            title: `${command.toUpperCase()} will execute in ${totalSeconds} seconds`,
+        },
+        async (progress, token) => {
+            token.onCancellationRequested(() => {
+                canceled = true;
+            });
+
+            progress.report({ message: "Cancel to abort." });
+
+            for (let remaining = totalSeconds; remaining > 0; remaining--) {
+                if (canceled) {
+                    return;
+                }
+
+                progress.report({
+                    increment: 100 / totalSeconds,
+                    message: `${remaining}s remaining`,
+                });
+
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+        }
+    );
+
+    return !canceled;
+}
+
+async function getKubectlContext(): Promise<string> {
+    try {
+        const stdout = await new Promise<string>((resolve, reject) => {
+            execFile("kubectl", ["config", "current-context"], (error, output) => {
+                if (error) {
+                    reject(error);
+                    return;
+                }
+
+                resolve(output.trim());
+            });
+        });
+
+        if (!stdout) {
+            throw new Error("kubectl context is empty.");
+        }
+
+        return stdout;
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`Unable to determine current kubectl context: ${message}`);
+    }
 }
 
 // Run kubectl command in terminal.
@@ -21,31 +81,44 @@ export async function runKubectlCommand(
         return;
     }
 
-    let sp: string = ` && \\\n`;
-    let infoEcho: string = `echo -e "\n \\033[42m[ ${command.toUpperCase()} ]`;
-    let warnEcho: string = `echo -e "\n \\033[41m[ ${command.toUpperCase()} ]`;
-    let endEcho: string = `\\033[0m will execute after 5s, \\033[;36;4m[Ctrl+c]\\033[0m to cancel"`;
-    let wait5Min: string = `for i in $(seq 5); do  echo "." && sleep 1 ; done`;
     let kubeCmd: string = `kubectl ${command} ${args} ${quotedResourcePath}`;
 
     const terminal = selectTerminal();
 
     // Double check before action.
     if (doubleCheck) {
-        const doubleCheck = await vscode.window.showInformationMessage('Do you want to continue KubeApply Action?', 'Yes', 'No');
+        let currentContext = "";
+        try {
+            currentContext = await getKubectlContext();
+        } catch (error) {
+            vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
+            return;
+        }
+
+        const doubleCheck = await vscode.window.showInformationMessage(
+            'Do you want to continue KubeApply Action?',
+            {
+                modal: true,
+                detail: `Context: ${currentContext}\nCommand: ${kubeCmd}`,
+            },
+            'Yes',
+            'No'
+        );
         if (doubleCheck !== 'Yes') {
             vscode.window.showInformationMessage('KubeApply Action canceled.');
             return;
         }
-        // Wait before exec command.
-        kubeCmd = `${wait5Min} ${sp} ${kubeCmd}`;
-    }
 
-    // Add Tips before exec command.
-    if (command === "delete") {
-        kubeCmd = `${warnEcho}${endEcho} ${sp} ${kubeCmd}`;
-    } else if (command === "apply") {
-        kubeCmd = `${infoEcho}${endEcho} ${sp} ${kubeCmd}`;
+        let shouldRun = false;
+        try {
+            shouldRun = await waitBeforeKubectl(command);
+        } catch {
+            return;
+        }
+        if (!shouldRun) {
+            vscode.window.showInformationMessage('KubeApply Action canceled.');
+            return;
+        }
     }
 
     terminal.sendText(`${kubeCmd}`);
