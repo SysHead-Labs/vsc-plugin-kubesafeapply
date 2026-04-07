@@ -7,7 +7,7 @@ import { runCdCommand } from "./cdhere";
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-  console.log('Congratulations, your extension "kubeApply" is now active!');
+  console.log('Congratulations, your extension "kubeSafeApply" is now active!');
 
   let disposableApply = vscode.commands.registerCommand(
     "kubeApply.apply",
