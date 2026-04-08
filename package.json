@@ -3,7 +3,7 @@
   "displayName": "Kubernetes Safe Apply",
   "description": "Apply/Diff/Delete Kubernetes resource files",
   "version": "2.0.1",
-  "publisher": "Syshead",
+  "publisher": "SysheadLabs",
   "keywords": [
     "kubernetes",
     "apply",
