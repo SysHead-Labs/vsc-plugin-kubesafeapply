@@ -1,50 +1,33 @@
 on:
-  push:
-    branches:
-      - master
+  workflow_dispatch:
 
 jobs:
-  test:
-    name: Test
-    strategy:
-      matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Setup Node.js
-        uses: actions/setup-node@v1
-        with:
-          node-version: 12
-      - name: Install dependencies
-        run: npm install
-      - name: Run headless test
-        uses: GabrielBB/xvfb-action@v1.0
-        with:
-          run: npm test
-
   publish:
-    name: Release and publish
-    needs: test
-    runs-on: ubuntu-18.04
+    name: Build and publish VS Code extension
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+
       - name: Setup Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v4
         with:
-          node-version: 12
+          node-version: '20'
+          cache: 'npm'
+
       - name: Install dependencies
-        run: npm install
-      - name: Release
+        run: npm ci
+
+      - name: Build
+        run: npm run compile
+
+      - name: Install vsce
+        run: npm install -g @vscode/vsce
+
+      - name: Package extension
+        run: vsce package
+
+      - name: Publish to VS Code Marketplace
         env:
-          GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npx semantic-release
-      - name: Vscode release plugin
-        uses: JCofman/vscodeaction@master
-        env:
-          PUBLISHER_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
-        with:
-          args: publish -p $PUBLISHER_TOKEN 
+          VSCE_PAT: ${{ secrets.PUBLISHER_TOKEN }}
+        run: vsce publish -p $VSCE_PAT
