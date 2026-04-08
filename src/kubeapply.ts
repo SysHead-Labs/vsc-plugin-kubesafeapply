@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { execFile } from "node:child_process";
-import { getResourcePath, ensureTerminalExists, selectTerminal } from "./utils";
+import { ensureTerminalExists, requireResourcePath, selectTerminal } from "./utils";
 import { mergeAndUpdateLocalResources, mergeAndUpdateLocalResourcesContainers } from "kubectl-sync2local";
 import { KubeConfig } from "@kubernetes/client-node";
 
@@ -74,55 +74,62 @@ export async function runKubectlCommand(
     args: string,
     uri: vscode.Uri | undefined
 ) {
-    const resourcePath = getResourcePath(uri);
-    const quotedResourcePath = resourcePath ? quoteShellArg(resourcePath) : "";
+    try {
+        const resourceKind = args === "-k" ? "directory" : "fileOrDirectory";
+        const actionLabel = args === "-k" ? "Kustomize action" : "Kubectl action";
+        const resourcePath = requireResourcePath(uri, resourceKind, actionLabel);
+        if (!resourcePath) {
+            return;
+        }
 
-    if (!ensureTerminalExists()) {
-        return;
+        const quotedResourcePath = quoteShellArg(resourcePath);
+
+        if (!ensureTerminalExists()) {
+            return;
+        }
+
+        const terminal = selectTerminal();
+        if (!terminal) {
+            return;
+        }
+
+        const kubeCmd = `kubectl ${command} ${args} ${quotedResourcePath}`;
+
+        // Double check before action.
+        if (doubleCheck) {
+            let currentContext = "";
+            try {
+                currentContext = await getKubectlContext();
+            } catch (error) {
+                vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
+                return;
+            }
+
+            const doubleCheck = await vscode.window.showInformationMessage(
+                'Do you want to continue KubeApply Action?',
+                {
+                    modal: true,
+                    detail: `Context: ${currentContext}\nCommand: ${kubeCmd}`,
+                },
+                'Yes',
+                'No'
+            );
+            if (doubleCheck !== 'Yes') {
+                vscode.window.showInformationMessage('KubeApply Action canceled.');
+                return;
+            }
+
+            const shouldRun = await waitBeforeKubectl(command);
+            if (!shouldRun) {
+                vscode.window.showInformationMessage('KubeApply Action canceled.');
+                return;
+            }
+        }
+
+        terminal.sendText(kubeCmd);
+    } catch (error) {
+        vscode.window.showErrorMessage(`KubeApply Error: ${error instanceof Error ? error.message : String(error)}`);
     }
-
-    let kubeCmd: string = `kubectl ${command} ${args} ${quotedResourcePath}`;
-
-    const terminal = selectTerminal();
-
-    // Double check before action.
-    if (doubleCheck) {
-        let currentContext = "";
-        try {
-            currentContext = await getKubectlContext();
-        } catch (error) {
-            vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
-            return;
-        }
-
-        const doubleCheck = await vscode.window.showInformationMessage(
-            'Do you want to continue KubeApply Action?',
-            {
-                modal: true,
-                detail: `Context: ${currentContext}\nCommand: ${kubeCmd}`,
-            },
-            'Yes',
-            'No'
-        );
-        if (doubleCheck !== 'Yes') {
-            vscode.window.showInformationMessage('KubeApply Action canceled.');
-            return;
-        }
-
-        let shouldRun = false;
-        try {
-            shouldRun = await waitBeforeKubectl(command);
-        } catch {
-            return;
-        }
-        if (!shouldRun) {
-            vscode.window.showInformationMessage('KubeApply Action canceled.');
-            return;
-        }
-    }
-
-    terminal.sendText(`${kubeCmd}`);
-
 }
 
 // Merge online resource config to local Yaml
@@ -135,13 +142,15 @@ export async function mergeAndUpdateYaml(
         const kc = new KubeConfig();
         kc.loadFromDefault();
 
-        const resourcePath = getResourcePath(uri);
-        const localPath: string = resourcePath ?? "";
+        const resourcePath = requireResourcePath(uri, "file", "Sync");
+        if (!resourcePath) {
+            return;
+        }
 
         if (containerOnly) {
-            await mergeAndUpdateLocalResourcesContainers(kc, localPath);
+            await mergeAndUpdateLocalResourcesContainers(kc, resourcePath);
         } else {
-            await mergeAndUpdateLocalResources(kc, localPath);
+            await mergeAndUpdateLocalResources(kc, resourcePath);
         }
         vscode.window.showInformationMessage(`kubeApply Sync resources ${resourcePath}`);
     } catch (error) {

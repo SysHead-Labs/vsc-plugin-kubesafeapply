@@ -6,6 +6,8 @@ A simple and slim extention to operate yaml files via `kubectl`.
 - right click and select the command to operate yaml or directory. 
 - Before `Apply` and `Delete`, the extension shows a confirmation dialog with the current kubectl context and the exact command to be executed.
 - After confirmation, `Apply` and `Delete` wait 5 seconds in VS Code with a cancellable countdown before sending the command to the terminal.
+- Kustomize actions require a folder, sync actions require a YAML file, and `cd` requires a folder.
+- Terminal-based actions stop early with a clear error if there is no active terminal.
 
 | Command | comment | keybindings |
 | :--- | :--- | :--- |
@@ -22,6 +24,7 @@ A simple and slim extention to operate yaml files via `kubectl`.
 
 - a configured `kubectl`
 - an active terminal in VSCode
+- a valid selected file or folder for the chosen action
 
 This project is a fork of https://github.com/bagechashu/vsc-plugin-kubeapply
 with additional functionality for Kubernetes context validation.

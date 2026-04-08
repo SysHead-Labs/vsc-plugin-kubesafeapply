@@ -1,19 +1,32 @@
 import * as vscode from "vscode";
-import { getResourcePath, ensureTerminalExists, selectTerminal } from "./utils";
+import { ensureTerminalExists, requireResourcePath, selectTerminal } from "./utils";
+
+function quoteShellArg(value: string): string {
+    return `'${value.replace(/'/g, `'\\''`)}'`;
+}
 
 // cd to selected directory in terminal.
 export async function runCdCommand(
     uri: vscode.Uri | undefined
 ) {
-    const resourcePath = getResourcePath(uri);
+    try {
+        const resourcePath = requireResourcePath(uri, "directory", "CD");
+        if (!resourcePath) {
+            return;
+        }
 
-    if (!ensureTerminalExists()) {
-        return;
+        if (!ensureTerminalExists()) {
+            return;
+        }
+
+        const terminal = selectTerminal();
+        if (!terminal) {
+            return;
+        }
+
+        const cdCmd = `cd ${quoteShellArg(resourcePath)}`;
+        terminal.sendText(cdCmd);
+    } catch (error) {
+        vscode.window.showErrorMessage(`CD Error: ${error instanceof Error ? error.message : String(error)}`);
     }
-
-    let cdCmd: string = `cd ${resourcePath}`;
-
-    const terminal = selectTerminal();
-
-    terminal.sendText(`${cdCmd}`);
 }

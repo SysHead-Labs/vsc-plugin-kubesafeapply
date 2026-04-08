@@ -1,8 +1,11 @@
 import * as vscode from "vscode";
+import { statSync } from "node:fs";
+
+type ResourceKind = "file" | "directory" | "fileOrDirectory";
 
 export function getResourcePath(
     uri: vscode.Uri | undefined
-) {
+): string | undefined {
     if (uri === undefined && vscode.window.activeTextEditor === undefined) {
         return;
     }
@@ -13,7 +16,44 @@ export function getResourcePath(
     } else if (vscode.window.activeTextEditor !== undefined) {
         resourcePath = vscode.window.activeTextEditor.document.uri.fsPath;
     }
-    console.log(resourcePath);
+
+    return resourcePath;
+}
+
+export function requireResourcePath(
+    uri: vscode.Uri | undefined,
+    kind: ResourceKind,
+    actionLabel: string
+): string | undefined {
+    const resourcePath = getResourcePath(uri);
+    if (!resourcePath) {
+        vscode.window.showErrorMessage(`${actionLabel} requires a selected file or folder.`);
+        return;
+    }
+
+    let stats;
+    try {
+        stats = statSync(resourcePath);
+    } catch {
+        vscode.window.showErrorMessage(`${actionLabel} could not access the selected path.`);
+        return;
+    }
+
+    if (kind === "file" && !stats.isFile()) {
+        vscode.window.showErrorMessage(`${actionLabel} requires a file.`);
+        return;
+    }
+
+    if (kind === "directory" && !stats.isDirectory()) {
+        vscode.window.showErrorMessage(`${actionLabel} requires a folder.`);
+        return;
+    }
+
+    if (kind === "fileOrDirectory" && !stats.isFile() && !stats.isDirectory()) {
+        vscode.window.showErrorMessage(`${actionLabel} requires a file or folder.`);
+        return;
+    }
+
     return resourcePath;
 }
 
@@ -25,6 +65,12 @@ export function ensureTerminalExists(): boolean {
     return true;
 }
 
-export function selectTerminal(): vscode.Terminal {
-    return <vscode.Terminal>(<any>vscode.window.activeTerminal);
+export function selectTerminal(): vscode.Terminal | undefined {
+    const terminal = <vscode.Terminal | undefined>(<any>vscode.window.activeTerminal);
+    if (!terminal) {
+        vscode.window.showErrorMessage("No active terminal selected.");
+        return;
+    }
+
+    return terminal;
 }
