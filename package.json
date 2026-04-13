@@ -127,10 +127,13 @@
     "esbuild": "^0.25.1",
     "typescript": "^5.7.2"
   },
-  "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/bagechashu/vscode-plugin-cicd-github-actions.git"
+    "url": "https://github.com/SysHead-Labs/vsc-plugin-kubesafeapply.git"
+  },
+  "homepage": "https://github.com/SysHead-Labs/vsc-plugin-kubesafeapply",
+  "bugs": {
+    "url": "https://github.com/SysHead-Labs/vsc-plugin-kubesafeapply/issues"
   },
   "dependencies": {
     "@kubernetes/client-node": "^1.3.0",
