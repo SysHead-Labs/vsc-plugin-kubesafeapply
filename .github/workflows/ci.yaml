@@ -1,3 +1,5 @@
+name: Publish VS Code Extension
+
 on:
   workflow_dispatch:
 
