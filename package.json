@@ -2,7 +2,7 @@
   "name": "kubernetes-safe-apply",
   "displayName": "Kubernetes Safe Apply",
   "description": "Apply/Diff/Delete Kubernetes resource files",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "publisher": "SysheadLabs",
   "keywords": [
     "kubernetes",

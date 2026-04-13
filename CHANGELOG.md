@@ -6,6 +6,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-04-13
+- Bump extension version to 2.1.0.
+- Fix package metadata URLs for the repository, homepage, and issue tracker.
+
 ## [2.0.1] - 2026-04-07
 - Bump extension version to 2.0.1.
 - Override transitive `lodash` to address the advisory reported by `npm audit`.
